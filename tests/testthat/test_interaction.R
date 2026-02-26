@@ -55,7 +55,7 @@ N <- 250
 test_results <- map(
     1:N,
     \(n) {
-        DGP(
+        data <- DGP(
             N = 500,
             N_T = 4,
             rho1 = 0.2,
