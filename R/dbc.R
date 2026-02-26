@@ -1,73 +1,128 @@
-#' @importFrom fixest demean, xpd
+#' Dynamic Bias Correction (DBC) Estimator
+#'
+#' Implements the bias-corrected GMM estimator from Klosin (2024) for
+#' dynamic panel models with fixed effects. Corrects for both Nickell bias
+#' and dynamic bias.
+#'
+#' @param outcome_fml Formula for the outcome equation. No fixed effects (no |).
+#'   Example: y ~ lag_y + D + X1 + D:W1
+#' @param treatment_fml Optional formula for the treatment equation. If NULL,
+#'   treatment is assumed exogenous (ρ₂ = 0). Example: D ~ lag_y + X2
+#' @param lag_y Character: name of the lagged outcome variable.
+#' @param treatment Character: name of the treatment variable.
+#' @param panel_id Character: name of the panel unit identifier.
+#' @param time_id Character: name of the time variable.
+#' @param data A data.frame or data.table.
+#' @param balance_type Character: passed to plm::make.pbalanced(). Default "shared.times".
+#'
+#' @return An object of class "dbc".
+#' @export
 dbc <- function(
-    fml,
-    lag_y_variable,
-    treatment_variable,
-    time_variable,
-    group_variable,
-    data
+    outcome_fml,
+    treatment_fml = NULL,
+    lag_y,
+    treatment,
+    panel_id,
+    time_id,
+    data,
+    balance_type = "shared.times",
+    reltol = 1e-12,
+    maxit = 10000
 ) {
-    # First, use fixest to fit the biased model
-    fixest_fit <- fixest::feols(fml, data)
+    # Convert to data.table
+    data <- data.table::as.data.table(data)
 
-    # Get the outcome variable
-    y_var <- all.vars(fml)[1]
+    # Validate formulae, etc are valid inputs
+    validate_inputs(
+        outcome_fml,
+        treatment_fml,
+        lag_y,
+        treatment,
+        panel_id,
+        time_id,
+        data
+    )
 
-    # Do the demeaning, and add back on the time variable
-    demeaned_data <- fixest::demean(fixest_fit)
-    demeaned_data <- as.data.table(demeaned_data)
-    demeaned_data[,
-        time := data[, get(time_variable)]
-    ]
-
-    # Get group/time stats
-    N_T <- max(data[, ..time_variable])
-    N <- data[, uniqueN(get(group_variable))]
-
-    # Extract out estimates from the fixest package
-    # To my mind, this would be most useful for a model with lots of control X variables
-    coef_est <- fixest_fit$coefficients
-    x_variable_names <- names(coef_est)
-
-    # Extract out these control variables and find their XB vector values
-    non_corrected_variables <- x_variable_names[
-        !x_variable_names %in% c(lag_y_variable, treatment_variable)
-    ]
-    non_corrected_coefficients <- coef_est[
-        !x_variable_names %in% c(lag_y_variable, treatment_variable)
-    ]
-
-    if (length(non_corrected_variables) > 0) {
-        # X'B (but i don't think this line works at the moment)
-        offset <- non_corrected_coefficients %*% data[, non_corrected_variables]
-    } else {
-        offset <- 0
+    # Validate whether treatment is binary
+    n_treat_vals <- data.table::uniqueN(data[[treatment]])
+    if (n_treat_vals <= 2) {
+        warning(
+            "Treatment '",
+            treatment,
+            "' has only ",
+            n_treat_vals,
+            " unique value(s). The DBC bias formula assumes time-varying ",
+            "treatment. Absorbing/binary treatment has a different (smaller) bias."
+        )
     }
 
-    # Then, pass this demeaned data to the GMM function
-    # TODO: Hard to pass additional arguments into g through gmm, so we'd need to setup and an env with those additional arguments and environmental variables
-    gmm_res <- gmm::gmm(
-        g,
-        x = demeaned_data,
-        t0 = c(0, 0, 0),
-        method = "Nelder-Mead",
-        control = list(reltol = 1e-25, maxit = 20000)
+    # Balance the panel
+    data <- balance_panel(data, panel_id, time_id, balance_type)
+
+    # Find # of panel ids
+    N <- data.table::uniqueN(data[[panel_id]])
+
+    # Find # of time periods
+    N_T <- data.table::uniqueN(data[[time_id]])
+
+    # Parse the formulae
+    parsed <- parse_formulas(outcome_fml, treatment_fml, lag_y, treatment, data)
+
+    # Demean data by panel id
+    dm_mats <- build_demeaned_matrices(
+        data,
+        parsed,
+        lag_y,
+        treatment,
+        panel_id,
+        time_id
+    )
+
+    # Solve OLS - returns biased values
+    # Use these as debiasing starting values
+    biased_ols <- get_biased_ols(dm_mats, parsed)
+
+    # Solve for debiased results
+    gmm_result <- run_dbc_gmm(
+        dm_mats = dm_mats,
+        parsed = parsed,
+        N = N,
+        N_T = N_T,
+        start_vals = biased_ols,
+        reltol = reltol,
+        maxit = maxit
+    )
+
+    # Extract out and name the debiased results
+    theta_hat <- gmm_result$coefficients
+    names(theta_hat) <- names(biased_ols)
+
+    # Check stationarity assumptions (equation 35)
+    idx <- build_theta_index(parsed)
+    phi_hat <- compute_phi(theta_hat, parsed, dm_mats$mu_W, idx)
+    if (abs(phi_hat) >= 1) {
+        warning(
+            "Estimated |φ| = ",
+            round(abs(phi_hat), 4),
+            " >= 1. Stationarity assumption (Assumption 5, eq 35) violated. ",
+            "Bias correction may be unreliable."
+        )
+    }
+
+    # Return
+    structure(
+        list(
+            coefficients = theta_hat,
+            biased_coefficients = biased_ols,
+            vcov = gmm_result$vcov,
+            se = sqrt(diag(gmm_result$vcov)),
+            phi = phi_hat,
+            N = N,
+            N_T = N_T,
+            gmm_fit = gmm_result$fit,
+            parsed = parsed,
+            call = match.call()
+        ),
+        class = "dbc"
     )
 }
-library(data.table)
-data <- DGP()
-fml <- y ~ lag_y + D | a
-
-lag_y_variable <- "lag_y"
-treatment_variable <- "D"
-time_variable <- "time"
-group_variable <- "fixed"
-
-dbc(
-    fml,
-    lag_y_variable,
-    treatment_variable,
-    time_variable,
-    group_variable,
-    data
-)
