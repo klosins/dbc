@@ -2,16 +2,17 @@
 % Please edit documentation in R/gmm.R
 \name{compute_phi}
 \alias{compute_phi}
-\title{Compute φ = ρ₁ + Σ_c τ_c ρ₂ μ_c}
+\title{Compute \eqn{\phi = \rho_1 + \sum_c \tau_c \rho_2 \mu_c}{phi = rho_1 + sum_c(tau_c*rho_2*mu_c)}}
 \usage{
 compute_phi(theta, parsed, mu_W, idx)
 }
 \description{
-Simple model (below Lemma 4.1): φ = ρ₁ + τ·ρ₂
-Interaction model (below eq 104): φ = ρ₁ + Σ_c τ_c ρ₂ μ_c
+Simple model (below Lemma 4.1): \eqn{\phi = \rho_1 + \tau \cdot \rho_2}{phi = rho_1 + tau*rho_2}
 }
 \details{
-Currently only the first Y-lag coefficient (ρ₁) enters φ.
-When multi-lag bias corrections are derived, φ will generalise.
+Interaction model (below eq 104): \eqn{\phi = \rho_1 + \sum_c \tau_c \rho_2 \mu_c}{phi = rho_1 + sum_c(tau_c*rho_2*mu_c)}
+
+Currently only the first Y-lag coefficient (\eqn{\rho_1}{rho_1}) enters \eqn{\phi}{phi}.
+When multi-lag bias corrections are derived, \eqn{\phi}{phi} will generalise.
 }
 \keyword{internal}

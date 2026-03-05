@@ -1,10 +1,11 @@
-#' Compute φ = ρ₁ + Σ_c τ_c ρ₂ μ_c
+#' Compute \eqn{\phi = \rho_1 + \sum_c \tau_c \rho_2 \mu_c}{phi = rho_1 + sum_c(tau_c*rho_2*mu_c)}
 #'
-#' Simple model (below Lemma 4.1): φ = ρ₁ + τ·ρ₂
-#' Interaction model (below eq 104): φ = ρ₁ + Σ_c τ_c ρ₂ μ_c
+#' Simple model (below Lemma 4.1): \eqn{\phi = \rho_1 + \tau \cdot \rho_2}{phi = rho_1 + tau*rho_2}
 #'
-#' Currently only the first Y-lag coefficient (ρ₁) enters φ.
-#' When multi-lag bias corrections are derived, φ will generalise.
+#' Interaction model (below eq 104): \eqn{\phi = \rho_1 + \sum_c \tau_c \rho_2 \mu_c}{phi = rho_1 + sum_c(tau_c*rho_2*mu_c)}
+#'
+#' Currently only the first Y-lag coefficient (\eqn{\rho_1}{rho_1}) enters \eqn{\phi}{phi}.
+#' When multi-lag bias corrections are derived, \eqn{\phi}{phi} will generalise.
 #'
 #' @keywords internal
 compute_phi <- function(theta, parsed, mu_W, idx) {
@@ -34,9 +35,9 @@ compute_phi <- function(theta, parsed, mu_W, idx) {
 }
 
 
-#' Build an index mapping into the θ vector
+#' Build an index mapping into the \eqn{\theta}{theta} vector
 #'
-#' θ ordering: [ρ₁,...,ρ_{nL}, τ_1,...,τ_{Nc}, β₁_1,..., ρ₂_1,..., lag_d_1,..., β₂_1,...]
+#' \eqn{\theta}{theta} ordering: \eqn{(\rho_1, \ldots, \rho_{n_L},\ \tau_1, \ldots, \tau_{N_c},\ \beta_{1,1}, \ldots,\ \rho_{2,1}, \ldots,\ \mathrm{lag\_d}_1, \ldots,\ \beta_{2,1}, \ldots)}{(rho_1,...,rho_nL, tau_1,...,tau_Nc, beta1_1,..., rho2_1,..., lag_d_1,..., beta2_1,...)}
 #'
 #' rho: integer vector of length n_lags_Y (indices of Y-lag coefficients)
 #' rho2: integer vector of length n_rho2 (Y-lag coefs in treatment equation)
@@ -99,10 +100,10 @@ build_theta_index <- function(parsed) {
 
 #' Bias term core
 #'
-#' Bias term core(σ², φ, T) = -σ²/T² · [(T-1)/(1-φ) - (φ - φ^T)/(1-φ)²]
+#' \deqn{-\frac{\sigma^2}{T^2} \left(\frac{T-1}{1-\phi} - \frac{\phi - \phi^T}{(1-\phi)^2}\right)}{-sigma^2/T^2 * ((T-1)/(1-phi) - (phi - phi^T)/(1-phi)^2)}
 #'
 #' @param sigma_sq Numeric vector: estimated variance (per-unit or scalar)
-#' @param phi Scalar: φ(θ)
+#' @param phi Scalar: \eqn{\phi(\theta)}{phi(theta)}
 #' @param N_T Integer: number of time periods T
 #' @return Numeric: bias term (same length as sigma_sq)
 #' @keywords internal
@@ -114,10 +115,11 @@ bias_term_core <- function(sigma_sq, phi, N_T) {
 #' GMM moment function for DBC
 #'
 #' Implements bias-corrected moment conditions from eq (32)-(33):
-#'   m^{DBC}_{iT}(θ) = m_{iT}(θ) - b̂_{iT}(θ)
 #'
-#' Returns an N × n_moments matrix (one row per unit, time-averaged
-#' per eq 34).
+#' \deqn{m^{DBC}_{iT}(\theta) = m_{iT}(\theta) - \hat{b}_{iT}(\theta)}{m_DBC_iT(theta) = m_iT(theta) - b_hat_iT(theta)}
+#'
+#' Returns an \eqn{N \times n_{\mathrm{moments}}}{N x n_moments} matrix (one row per unit,
+#' time-averaged per eq 34).
 #'
 #' @param theta Parameter vector
 #' @param x List containing demeaned matrices and metadata

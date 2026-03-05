@@ -16,10 +16,11 @@ N × n_moments matrix
 }
 \description{
 Implements bias-corrected moment conditions from eq (32)-(33):
-m^{DBC}\emph{{iT}(θ) = m}{iT}(θ) - b̂_{iT}(θ)
 }
 \details{
-Returns an N × n_moments matrix (one row per unit, time-averaged
-per eq 34).
+\deqn{m^{DBC}_{iT}(\theta) = m_{iT}(\theta) - \hat{b}_{iT}(\theta)}{m_DBC_iT(theta) = m_iT(theta) - b_hat_iT(theta)}
+
+Returns an \eqn{N \times n_{\mathrm{moments}}}{N x n_moments} matrix (one row per unit,
+time-averaged per eq 34).
 }
 \keyword{internal}

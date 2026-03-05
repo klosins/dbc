@@ -2,12 +2,12 @@
 % Please edit documentation in R/gmm.R
 \name{build_theta_index}
 \alias{build_theta_index}
-\title{Build an index mapping into the θ vector}
+\title{Build an index mapping into the \eqn{\theta}{theta} vector}
 \usage{
 build_theta_index(parsed)
 }
 \description{
-θ ordering: \link{ρ₁,...,ρ_{nL}, τ_1,...,τ_{Nc}, β₁_1,..., ρ₂_1,..., lag_d_1,..., β₂_1,...}
+\eqn{\theta}{theta} ordering: \eqn{(\rho_1, \ldots, \rho_{n_L},\ \tau_1, \ldots, \tau_{N_c},\ \beta_{1,1}, \ldots,\ \rho_{2,1}, \ldots,\ \mathrm{lag\_d}_1, \ldots,\ \beta_{2,1}, \ldots)}{(rho_1,...,rho_nL, tau_1,...,tau_Nc, beta1_1,..., rho2_1,..., lag_d_1,..., beta2_1,...)}
 }
 \details{
 rho: integer vector of length n_lags_Y (indices of Y-lag coefficients)

@@ -1,24 +1,27 @@
 #' Generate data from dynamic panel (Klosin eqs 88-89)
 #'
 #' If n_W = 0 (no interactions):
-#'   Y_{i,t} = a_i + τ₀ D_{i,t} + β₁'X₁_i + ρ₁ Y_{i,t-1} + ε_{i,t}
+#'
+#' \deqn{Y_{i,t} = a_i + \tau_0 D_{i,t} + \beta_1' X_{1,i} + \rho_1 Y_{i,t-1} + \varepsilon_{i,t}}{Y_it = a_i + tau_0*D_it + beta_1'*X1_i + rho_1*Y_i(t-1) + eps_it}
 #'
 #' If n_W > 0 (with interactions, eq 88):
-#'   Y_{i,t} = a_i + Σ_c τ_c (D_{i,t} · W^c_i) + β₁'X₁_i + ρ₁ Y_{i,t-1} + ε_{i,t}
+#'
+#' \deqn{Y_{i,t} = a_i + \sum_c \tau_c (D_{i,t} \cdot W^c_i) + \beta_1' X_{1,i} + \rho_1 Y_{i,t-1} + \varepsilon_{i,t}}{Y_it = a_i + sum_c tau_c*(D_it*W^c_i) + beta_1'*X1_i + rho_1*Y_i(t-1) + eps_it}
 #'
 #' Treatment equation (eq 89):
-#'   D_{i,t} = c_i + ρ₂ Y_{i,t-1} + β₂'X₂_i + u_{i,t}
+#'
+#' \deqn{D_{i,t} = c_i + \rho_2 Y_{i,t-1} + \beta_2' X_{2,i} + u_{i,t}}{D_it = c_i + rho_2*Y_i(t-1) + beta_2'*X2_i + u_it}
 #'
 #' @param N Number of individuals
 #' @param N_T Number of time periods
-#' @param rho1 Coefficient on lagged outcome in outcome equation (ρ₁)
-#' @param rho2 Coefficient on lagged outcome in treatment equation (ρ₂)
+#' @param rho1 Coefficient on lagged outcome in outcome equation (\eqn{\rho_1}{rho_1})
+#' @param rho2 Coefficient on lagged outcome in treatment equation (\eqn{\rho_2}{rho_2})
 #' @param tau Treatment effect. Scalar if n_W=0, vector of length n_W if n_W>0. Default 1.
 #' @param n_X1 Number of exogenous covariates in outcome equation (default 0)
 #' @param n_X2 Number of exogenous covariates in treatment equation (default 0)
 #' @param n_W Number of covariates interacting with treatment (default 0)
-#' @param beta_X1 Coefficients on X1 covariates (default NULL → vector of 1s)
-#' @param beta_X2 Coefficients on X2 covariates (default NULL → vector of 1s)
+#' @param beta_X1 Coefficients on X1 covariates (default NULL -> vector of 1s)
+#' @param beta_X2 Coefficients on X2 covariates (default NULL -> vector of 1s)
 #' @return data.table with columns: panel_id, time, a, D, y, lag_y, plus covariate columns
 #' @export
 DGP <- function(
@@ -196,3 +199,5 @@ DGP <- function(
 
     DT
 }
+
+utils::globalVariables(c("D", "y", "lag_y", ".panel_grp"))

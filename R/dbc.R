@@ -7,7 +7,7 @@
 #' @param outcome_fml Formula for the outcome equation. No fixed effects (no |).
 #'   Example: y ~ lag_y1 + D + X1 + D:W1
 #' @param treatment_fml Optional formula for the treatment equation. If NULL,
-#'   treatment is assumed exogenous (ρ₂ = 0). Example: D ~ lag_y1 + X2
+#'   treatment is assumed exogenous (\eqn{\rho_2 = 0}{rho_2 = 0}). Example: D ~ lag_y1 + X2
 #' @param lag_y Character vector of lagged outcome variable names in the outcome
 #'   equation, ordered lag-1, lag-2, ... Currently only length-1 is supported.
 #'   Example: "lag_y1", or c("lag_y1", "lag_y2") (latter errors until implemented).
@@ -18,6 +18,8 @@
 #' @param time_id Character: name of the time variable.
 #' @param data A data.frame or data.table.
 #' @param balance_type Character: passed to plm::make.pbalanced(). Default "shared.times".
+#' @param reltol Double: Relative convergence tolerance of GMM objective function.
+#' @param maxit Double: Maximum number of solver iterations.
 #'
 #' @return An object of class "dbc".
 #' @export
@@ -120,7 +122,7 @@ dbc <- function(
     phi_hat <- compute_phi(theta_hat, parsed, dm_mats$mu_W, idx)
     if (abs(phi_hat) >= 1) {
         warning(
-            "Estimated |φ| = ",
+            "Estimated |phi| = ",
             round(abs(phi_hat), 4),
             " >= 1. Stationarity assumption (Assumption 5, eq 35) violated. ",
             "Bias correction may be unreliable."

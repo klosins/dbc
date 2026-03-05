@@ -2,3 +2,13 @@
 
 export(DGP)
 export(dbc)
+importFrom(data.table,":=")
+importFrom(data.table,.N)
+importFrom(data.table,.SD)
+importFrom(stats,ave)
+importFrom(stats,coef)
+importFrom(stats,lm.fit)
+importFrom(stats,model.matrix)
+importFrom(stats,rnorm)
+importFrom(stats,terms)
+importFrom(stats,vcov)

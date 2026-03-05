@@ -9,7 +9,7 @@ bias_term_core(sigma_sq, phi, N_T)
 \arguments{
 \item{sigma_sq}{Numeric vector: estimated variance (per-unit or scalar)}
 
-\item{phi}{Scalar: φ(θ)}
+\item{phi}{Scalar: \eqn{\phi(\theta)}{phi(theta)}}
 
 \item{N_T}{Integer: number of time periods T}
 }
@@ -17,6 +17,6 @@ bias_term_core(sigma_sq, phi, N_T)
 Numeric: bias term (same length as sigma_sq)
 }
 \description{
-Bias term core(σ², φ, T) = -σ²/T² · \link{(T-1)/(1-φ) - (φ - φ^T)/(1-φ)²}
+\deqn{-\frac{\sigma^2}{T^2} \left(\frac{T-1}{1-\phi} - \frac{\phi - \phi^T}{(1-\phi)^2}\right)}{-sigma^2/T^2 * ((T-1)/(1-phi) - (phi - phi^T)/(1-phi)^2)}
 }
 \keyword{internal}

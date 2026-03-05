@@ -22,9 +22,9 @@ DGP(
 
 \item{N_T}{Number of time periods}
 
-\item{rho1}{Coefficient on lagged outcome in outcome equation (ρ₁)}
+\item{rho1}{Coefficient on lagged outcome in outcome equation (\eqn{\rho_1}{rho_1})}
 
-\item{rho2}{Coefficient on lagged outcome in treatment equation (ρ₂)}
+\item{rho2}{Coefficient on lagged outcome in treatment equation (\eqn{\rho_2}{rho_2})}
 
 \item{tau}{Treatment effect. Scalar if n_W=0, vector of length n_W if n_W>0. Default 1.}
 
@@ -34,21 +34,24 @@ DGP(
 
 \item{n_W}{Number of covariates interacting with treatment (default 0)}
 
-\item{beta_X1}{Coefficients on X1 covariates (default NULL → vector of 1s)}
+\item{beta_X1}{Coefficients on X1 covariates (default NULL -> vector of 1s)}
 
-\item{beta_X2}{Coefficients on X2 covariates (default NULL → vector of 1s)}
+\item{beta_X2}{Coefficients on X2 covariates (default NULL -> vector of 1s)}
 }
 \value{
 data.table with columns: panel_id, time, a, D, y, lag_y, plus covariate columns
 }
 \description{
 If n_W = 0 (no interactions):
-Y_{i,t} = a_i + τ₀ D_{i,t} + β₁'X₁_i + ρ₁ Y_{i,t-1} + ε_{i,t}
 }
 \details{
+\deqn{Y_{i,t} = a_i + \tau_0 D_{i,t} + \beta_1' X_{1,i} + \rho_1 Y_{i,t-1} + \varepsilon_{i,t}}{Y_it = a_i + tau_0*D_it + beta_1'*X1_i + rho_1*Y_i(t-1) + eps_it}
+
 If n_W > 0 (with interactions, eq 88):
-Y_{i,t} = a_i + Σ_c τ_c (D_{i,t} · W^c_i) + β₁'X₁_i + ρ₁ Y_{i,t-1} + ε_{i,t}
+
+\deqn{Y_{i,t} = a_i + \sum_c \tau_c (D_{i,t} \cdot W^c_i) + \beta_1' X_{1,i} + \rho_1 Y_{i,t-1} + \varepsilon_{i,t}}{Y_it = a_i + sum_c tau_c*(D_it*W^c_i) + beta_1'*X1_i + rho_1*Y_i(t-1) + eps_it}
 
 Treatment equation (eq 89):
-D_{i,t} = c_i + ρ₂ Y_{i,t-1} + β₂'X₂_i + u_{i,t}
+
+\deqn{D_{i,t} = c_i + \rho_2 Y_{i,t-1} + \beta_2' X_{2,i} + u_{i,t}}{D_it = c_i + rho_2*Y_i(t-1) + beta_2'*X2_i + u_it}
 }

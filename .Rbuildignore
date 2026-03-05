@@ -1,0 +1,7 @@
+
+^dev$
+^\.github$
+^cran-comments\.md$
+^package_check_and_build\.R$
+^readme_code$
+^LICENSE\.md$

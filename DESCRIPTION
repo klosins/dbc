@@ -1,14 +1,22 @@
 Package: dbc
-Title: What the Package Does (One Line, Title Case)
+Title: Dynamic Bias Correction for Panel Data Estimators
 Version: 0.0.0.9000
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
+    c(
+        person("Sylvia", "Klosin", email = "sklosin@ucdavis.edu", role = c("cre", "cph")),
+        person("Stuart", "Morrison", role = "aut", comment = c(ORCID = "0000-0003-4289-2839"))
+    )
 Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+License: MIT + file LICENSE
+URL: https://github.com/klosins/dbc/
+Imports:
+    data.table,
+    gmm,
+    plm
+Suggests: 
+    testthat (>= 3.0.0),
+    tidyverse
+Config/testthat/edition: 3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
-Suggests: 
-    testthat (>= 3.0.0)
-Config/testthat/edition: 3

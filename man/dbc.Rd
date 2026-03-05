@@ -23,7 +23,7 @@ dbc(
 Example: y ~ lag_y1 + D + X1 + D:W1}
 
 \item{treatment_fml}{Optional formula for the treatment equation. If NULL,
-treatment is assumed exogenous (ρ₂ = 0). Example: D ~ lag_y1 + X2}
+treatment is assumed exogenous (\eqn{\rho_2 = 0}{rho_2 = 0}). Example: D ~ lag_y1 + X2}
 
 \item{lag_y}{Character vector of lagged outcome variable names in the outcome
 equation, ordered lag-1, lag-2, ... Currently only length-1 is supported.
@@ -41,6 +41,10 @@ treatment equation. Currently not supported (errors if non-empty).}
 \item{data}{A data.frame or data.table.}
 
 \item{balance_type}{Character: passed to plm::make.pbalanced(). Default "shared.times".}
+
+\item{reltol}{Double: Relative convergence tolerance of GMM objective function.}
+
+\item{maxit}{Double: Maximum number of solver iterations.}
 }
 \value{
 An object of class "dbc".
