@@ -3,15 +3,19 @@
 #' Simple model (below Lemma 4.1): φ = ρ₁ + τ·ρ₂
 #' Interaction model (below eq 104): φ = ρ₁ + Σ_c τ_c ρ₂ μ_c
 #'
+#' Currently only the first Y-lag coefficient (ρ₁) enters φ.
+#' When multi-lag bias corrections are derived, φ will generalise.
+#'
 #' @keywords internal
 compute_phi <- function(theta, parsed, mu_W, idx) {
-    rho1 <- theta[idx$rho1]
+    # φ is defined via the first Y-lag only (current supported case: n_lags_Y == 1)
+    rho1 <- theta[idx$rho[1]]
 
     if (!parsed$has_treatment_eq || !parsed$has_lag_y_in_treatment) {
         return(rho1)
     }
 
-    rho2 <- theta[idx$rho2]
+    rho2 <- theta[idx$rho2[1]]
     tau <- theta[idx$tau]
 
     if (length(parsed$W_vars) > 0) {
@@ -32,14 +36,20 @@ compute_phi <- function(theta, parsed, mu_W, idx) {
 
 #' Build an index mapping into the θ vector
 #'
-#' θ ordering: [ρ₁, τ_1,...,τ_{Nc}, β₁_1,..., ρ₂, β₂_1,...]
+#' θ ordering: [ρ₁,...,ρ_{nL}, τ_1,...,τ_{Nc}, β₁_1,..., ρ₂_1,..., lag_d_1,..., β₂_1,...]
+#'
+#' rho: integer vector of length n_lags_Y (indices of Y-lag coefficients)
+#' rho2: integer vector of length n_rho2 (Y-lag coefs in treatment equation)
+#' lag_d: integer vector of length n_lag_d (D-lag coefs in treatment equation, placeholder)
 #'
 #' @keywords internal
 build_theta_index <- function(parsed) {
     pos <- 1
 
-    rho1 <- pos
-    pos <- pos + 1
+    # Y-lag coefficients in outcome equation: one per lag
+    n_lags_Y <- parsed$n_lags_Y
+    rho <- seq(pos, length.out = n_lags_Y)
+    pos <- pos + n_lags_Y
 
     n_tau <- parsed$n_tau
     tau <- seq(pos, length.out = n_tau)
@@ -50,13 +60,24 @@ build_theta_index <- function(parsed) {
     pos <- pos + n_beta1
 
     rho2 <- integer(0)
+    lag_d <- integer(0)
     beta2 <- integer(0)
 
     if (parsed$has_treatment_eq) {
-        if (parsed$has_lag_y_in_treatment) {
-            rho2 <- pos
-            pos <- pos + 1
+        # Y-lag coefficients in treatment equation
+        n_rho2 <- parsed$n_rho2
+        if (n_rho2 > 0) {
+            rho2 <- seq(pos, length.out = n_rho2)
+            pos <- pos + n_rho2
         }
+
+        # D-lag coefficients in treatment equation (placeholder for future bias terms)
+        n_lag_d <- parsed$n_lag_d
+        if (n_lag_d > 0) {
+            lag_d <- seq(pos, length.out = n_lag_d)
+            pos <- pos + n_lag_d
+        }
+
         n_beta2 <- parsed$n_beta2
         if (n_beta2 > 0) {
             beta2 <- seq(pos, length.out = n_beta2)
@@ -65,36 +86,28 @@ build_theta_index <- function(parsed) {
     }
 
     list(
-        rho1 = rho1,
+        rho = rho, # length = n_lags_Y
         tau = tau,
         beta1 = beta1,
-        rho2 = rho2,
+        rho2 = rho2, # length = n_rho2
+        lag_d = lag_d, # length = n_lag_d (placeholder)
         beta2 = beta2,
         n_params = pos - 1
     )
 }
 
 
-#' Kiviet-style bias kernel (for b_{ρ₁} and b_{τ})
+#' Bias term core
 #'
-#' K(σ², φ, T) = -σ²/T² · [(T-1)/(1-φ) - (φ - φ^T)/(1-φ)²]
+#' Bias term core(σ², φ, T) = -σ²/T² · [(T-1)/(1-φ) - (φ - φ^T)/(1-φ)²]
 #'
 #' @param sigma_sq Numeric vector: estimated variance (per-unit or scalar)
 #' @param phi Scalar: φ(θ)
 #' @param N_T Integer: number of time periods T
 #' @return Numeric: bias term (same length as sigma_sq)
 #' @keywords internal
-kiviet_kernel <- function(sigma_sq, phi, N_T) {
+bias_term_core <- function(sigma_sq, phi, N_T) {
     -sigma_sq / N_T^2 * ((N_T - 1) / (1 - phi) - (phi - phi^N_T) / (1 - phi)^2)
-}
-
-
-#' Kiviet-style bias kernel for b_{ρ₂}
-#'
-#' @keywords internal
-kiviet_kernel_rho2 <- function(sigma_sq, phi, N_T) {
-    # Same as kiviet_kernel
-    kiviet_kernel(sigma_sq, phi, N_T)
 }
 
 
@@ -125,30 +138,41 @@ gmm_moment_fn <- function(theta, x) {
     D_dm <- dm_mats$D_dm
 
     # Extract parameters
-    rho1 <- theta[idx$rho1]
+    # rho: vector of Y-lag coefficients [ρ₁, ρ₂, ...] in outcome equation
+    rho <- theta[idx$rho]
     tau <- theta[idx$tau]
     beta1 <- if (length(idx$beta1) > 0) theta[idx$beta1] else numeric(0)
-    rho2 <- if (length(idx$rho2) > 0) theta[idx$rho2] else 0
+    # rho2: Y-lag coefficients in treatment equation [ρ₂₁, ρ₂₂, ...]
+    rho2 <- if (length(idx$rho2) > 0) theta[idx$rho2] else numeric(0)
+    # lag_d: D-lag coefficients in treatment equation (placeholder)
+    lag_d_coef <- if (length(idx$lag_d) > 0) theta[idx$lag_d] else numeric(0)
+    # Other explanatory variables in treatment equation
     beta2 <- if (length(idx$beta2) > 0) theta[idx$beta2] else numeric(0)
 
     # Compute phi
     phi <- compute_phi(theta, parsed, mu_W, idx)
 
     # Outcome residuals ε̃(θ)
-    # ε̃ = ỹ - X̃_out %*% β_out  where β_out = [ρ₁, τ, β₁]
-    beta_out <- c(rho1, tau, beta1)
+    # ε̃ = ỹ - X̃_out %*% β_out  where β_out = [ρ₁,..., τ, β₁]
+    beta_out <- c(rho, tau, beta1)
     # Reorder to match design matrix column order
-    out_col_order <- c(dm_mats$rho1_cols, dm_mats$tau_cols, dm_mats$beta1_cols)
+    out_col_order <- c(
+        unlist(dm_mats$rho_cols),
+        dm_mats$tau_cols,
+        dm_mats$beta1_cols
+    )
     eps_tilde <- y_dm - X_out[, out_col_order, drop = FALSE] %*% beta_out
 
     # Treatment residuals ũ(θ) (if treatment equation present)
     u_tilde <- NULL
     if (parsed$has_treatment_eq && !is.null(X_treat)) {
-        beta_treat <- c(
-            if (length(idx$rho2) > 0) rho2 else NULL,
-            beta2
+        # β_treat = [ρ₂₁,..., lag_d coefs, β₂]
+        beta_treat <- c(rho2, beta2)
+        treat_col_order <- c(
+            unlist(dm_mats$rho2_cols),
+            unlist(dm_mats$lag_d_cols),
+            dm_mats$beta2_cols
         )
-        treat_col_order <- c(dm_mats$rho2_cols, dm_mats$beta2_cols)
         u_tilde <- D_dm -
             X_treat[, treat_col_order, drop = FALSE] %*% beta_treat
     }
@@ -172,20 +196,31 @@ gmm_moment_fn <- function(theta, x) {
         })
     }
 
-    # Bias corrections per unit (eqs 29-31, 105)
-    # b_{ρ₁,iT}(θ) = K(σ²_{ε,i}, φ, T)          (eq 29)
-    b_rho1_i <- kiviet_kernel(sigma_eps_i, phi, N_T)
-
     # Build moment conditions
     n_moments <- idx$n_params
     n_obs <- length(eps_tilde)
     moments <- matrix(0, nrow = n_obs, ncol = n_moments)
     col <- 1
 
+    # --- Outcome equation moments ---
+
     # m^{DBC}_{ρ₁} = Ỹ_{t-1} · ε̃ - b_{ρ₁,i}   (eq 33, row 1)
-    Y_lag_dm <- X_out[, dm_mats$rho1_cols]
-    moments[, col] <- Y_lag_dm * eps_tilde - b_rho1_i
+    # Currently only ρ₁ (first Y-lag) has a bias correction derived.
+    Y_lag1_dm <- X_out[, dm_mats$rho_cols[[1]]]
+    b_rho1_i <- bias_term_core(sigma_eps_i, phi, N_T)
+    moments[, col] <- Y_lag1_dm * eps_tilde - b_rho1_i
     col <- col + 1
+
+    # Higher Y-lag moments (no bias correction derived yet — plain OLS moment)
+    if (parsed$n_lags_Y > 1) {
+        for (k in 2:parsed$n_lags_Y) {
+            # Not yet supported
+            # Relevant data objects are:
+            #   # New columnn in the moment matrix: moments[, col]
+            #   # The Vector of each lag Y for k > 2: X_out[, dm_mats$rho_cols[[k]]]
+            #   # Update moment columns: col <- col + 1
+        }
+    }
 
     # τ moments (eq 33 row 2 / eq 105 row 2)
     tau_instruments <- X_out[, dm_mats$tau_cols, drop = FALSE]
@@ -196,8 +231,11 @@ gmm_moment_fn <- function(theta, x) {
         if (parsed$has_bare_treatment) 1 else NULL,
         mu_W
     )
+    rho2_scalar <- if (length(rho2) > 0) rho2[1] else 0
     for (k in seq_along(dm_mats$tau_cols)) {
-        b_tau_k <- rho2 * mu_vec[k] * kiviet_kernel(sigma_eps_i, phi, N_T)
+        b_tau_k <- rho2_scalar *
+            mu_vec[k] *
+            bias_term_core(sigma_eps_i, phi, N_T)
         moments[, col] <- tau_instruments[, k] * eps_tilde - b_tau_k
         col <- col + 1
     }
@@ -211,17 +249,28 @@ gmm_moment_fn <- function(theta, x) {
         }
     }
 
-    # Treatment equation moments (if present)
+    # --- Treatment equation moments (if present) ---
     if (parsed$has_treatment_eq && !is.null(u_tilde)) {
         if (parsed$has_lag_y_in_treatment) {
             # m^{DBC}_{ρ₂} = Ỹ_{t-1} · ũ - b_{ρ₂,i}  (eq 33, row 3)
             # b_{ρ₂,iT} = τ · K₂(σ²_{u,i}, φ, T)  (eq 31, note T² denominator)
             # Interaction model: b_{ρ₂} = (Σ τ_c μ_c) · K₂(σ²_{u,i}, φ, T) (eq 105 row 3)
             sum_tau_mu <- sum(tau * mu_vec)
-            b_rho2_i <- sum_tau_mu * kiviet_kernel_rho2(sigma_u_i, phi, N_T)
-            Y_lag_treat <- X_treat[, dm_mats$rho2_cols]
+            b_rho2_i <- sum_tau_mu * bias_term_core(sigma_u_i, phi, N_T)
+            Y_lag_treat <- X_treat[, dm_mats$rho2_cols[[1]]]
             moments[, col] <- Y_lag_treat * u_tilde - b_rho2_i
             col <- col + 1
+        }
+
+        # D-lag moments in treatment equation (placeholder)
+        if (length(dm_mats$lag_d_cols) > 0) {
+            for (lag_d_col_idx in unlist(dm_mats$lag_d_cols)) {
+                # Not yet supported
+                # Relevant data objects are:
+                #   # New columnn in the moment matrix: moments[, col]
+                #   # The Vector of each lag D:  X_treat[, lag_d_col_idx]
+                #   # Update moment columns: col <- col + 1
+            }
         }
 
         # β₂ moments: no bias correction (eq 105, row 5: b_{β₂} = 0)

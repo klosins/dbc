@@ -5,10 +5,14 @@
 #' and dynamic bias.
 #'
 #' @param outcome_fml Formula for the outcome equation. No fixed effects (no |).
-#'   Example: y ~ lag_y + D + X1 + D:W1
+#'   Example: y ~ lag_y1 + D + X1 + D:W1
 #' @param treatment_fml Optional formula for the treatment equation. If NULL,
-#'   treatment is assumed exogenous (ρ₂ = 0). Example: D ~ lag_y + X2
-#' @param lag_y Character: name of the lagged outcome variable.
+#'   treatment is assumed exogenous (ρ₂ = 0). Example: D ~ lag_y1 + X2
+#' @param lag_y Character vector of lagged outcome variable names in the outcome
+#'   equation, ordered lag-1, lag-2, ... Currently only length-1 is supported.
+#'   Example: "lag_y1", or c("lag_y1", "lag_y2") (latter errors until implemented).
+#' @param lag_d Character vector of lagged treatment variable names in the
+#'   treatment equation. Currently not supported (errors if non-empty).
 #' @param treatment Character: name of the treatment variable.
 #' @param panel_id Character: name of the panel unit identifier.
 #' @param time_id Character: name of the time variable.
@@ -21,6 +25,7 @@ dbc <- function(
     outcome_fml,
     treatment_fml = NULL,
     lag_y,
+    lag_d = character(0),
     treatment,
     panel_id,
     time_id,
@@ -30,18 +35,26 @@ dbc <- function(
     maxit = 10000
 ) {
     # Convert to data.table
-    data <- data.table::as.data.table(data)
+    if (nrow(data) > 0) {
+        data <- data.table::as.data.table(data)
+    } else {
+        stop("Data has 0 rows.")
+    }
 
     # Validate formulae, etc are valid inputs
     validate_inputs(
         outcome_fml,
         treatment_fml,
         lag_y,
+        lag_d,
         treatment,
         panel_id,
         time_id,
         data
     )
+
+    # Balance the panel
+    data <- balance_panel(data, panel_id, time_id, balance_type)
 
     # Validate whether treatment is binary
     n_treat_vals <- data.table::uniqueN(data[[treatment]])
@@ -56,9 +69,6 @@ dbc <- function(
         )
     }
 
-    # Balance the panel
-    data <- balance_panel(data, panel_id, time_id, balance_type)
-
     # Find # of panel ids
     N <- data.table::uniqueN(data[[panel_id]])
 
@@ -66,13 +76,21 @@ dbc <- function(
     N_T <- data.table::uniqueN(data[[time_id]])
 
     # Parse the formulae
-    parsed <- parse_formulas(outcome_fml, treatment_fml, lag_y, treatment, data)
+    parsed <- parse_formulas(
+        outcome_fml,
+        treatment_fml,
+        lag_y,
+        lag_d,
+        treatment,
+        data
+    )
 
     # Demean data by panel id
     dm_mats <- build_demeaned_matrices(
         data,
         parsed,
         lag_y,
+        lag_d,
         treatment,
         panel_id,
         time_id
