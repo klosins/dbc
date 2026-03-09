@@ -1,0 +1,179 @@
+---
+output:
+  github_document:
+    html_preview: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  collapse  = TRUE,
+  comment   = "#>",
+  fig.path  = "readme_code/",
+  out.width = "100%"
+)
+```
+
+<!-- badges: start -->
+ [![R-CMD-check](https://github.com/klosins/dbc/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/klosins/dbc/actions/workflows/R-CMD-check.yaml)
+<!-- badges: end -->
+
+# dbc
+
+## Dynamic bias correction for panel data estimators
+
+This package implements the dynamic biases correction estimator as per Klosin, S, Dynamic Biases of Static Panel Data Estimators (forthcoming). This allows the estimation of treatment effects in panel fixed effects models where the outcome is dynamic.
+
+
+
+## Installation
+
+```r
+# Install the CRAN version
+pak::pak("dbc")
+
+# Or install the latest version on github
+pak::pak("github::klosins/dbc")
+```
+
+## Usage
+
+```{r load}
+library(dbc)
+```
+
+The follows shows example usage of the DBC under three general types of model.
+
+The first is the **exogenous** treatment model, where the outcome is:
+$$Y_{it} = \alpha_{i} + \rho_{1} Y_{t-1} + \tau D_{t} + \beta_{1} X_{1} +\varepsilon_{it}$$
+
+```{r exog}
+
+
+# Exogenous treatment (no lag_y in treatment equation)
+data_exog <- DGP(N = 500, N_T = 4, rho1 = 0.2, rho2 = 0, tau = 0.5,n_X1 = 1, n_X2 = 0)
+
+
+fit_exog <- dbc(
+    outcome_fml = y ~ lag_y + D,
+    lag_y       = "lag_y",
+    treatment   = "D",
+    panel_id    = "panel_id",
+    time_id     = "time",
+    data        = data_exog
+)
+
+
+summary(fit_exog)
+```
+
+The second, is the **endogenous** treatment model, where the treatment effect is also a function of the previous values of the outcome:
+$$Y_{it} = \alpha_{i} + \rho_{1} Y_{t-1} + \tau D_{t} \beta_{1}X_{1}  +\varepsilon_{it}$$
+$$D_{it} = c_{i} + \rho_{2} Y_{t-1}  + \beta_{2} X_{2} + u_{it}$$
+
+```{r endo}
+
+set.seed(42)
+
+# Endogenous treatment (lag_y in treatment equation)
+data_endo <- DGP(N = 500, N_T = 4, rho1 = 0.2, rho2 = 0.3, tau = 0.5,n_X1 = 1, n_X2 = 1)
+
+fit_endo <- dbc(
+    outcome_fml   = y ~ lag_y + D,
+    treatment_fml = D ~ lag_y,
+    lag_y         = "lag_y",
+    treatment     = "D",
+    panel_id      = "panel_id",
+    time_id       = "time",
+    data          = data_endo
+)
+
+summary(fit_endo)
+```
+
+Last, the model that allows for interactions between the treatment variable and exogenous variables: 
+$$Y_{it} = \alpha_{i} + \rho_{1} Y_{t-1} + \tau_{1} W_{1} \times D_{t} + \tau_{2} W_{2} \times D_{t} \beta_{1}X_{1}  +\varepsilon_{it}$$
+$$D_{it} = c_{i} + \rho_{2} Y_{t-1}  + \beta_{2} X_{2} + u_{it}$$
+
+
+```{r interact}
+
+
+# With moderators/interactions
+data_interact <- DGP(
+    N = 500, N_T = 4,
+    rho1 = 0.2, rho2 = 0.3,
+    tau = c(0.8, 1.2),
+    n_X1 = 1, n_X2 = 1, n_W = 2
+)
+
+
+fit_interact <- dbc(
+    outcome_fml   = y ~ lag_y + D:W_1 + D:W_2 + X1_1,
+    treatment_fml = D ~ lag_y + X2_1,
+    lag_y         = "lag_y",
+    treatment     = "D",
+    panel_id      = "panel_id",
+    time_id       = "time",
+    data          = data_interact
+)
+
+summary(fit_interact)
+```
+
+### S3 methods
+
+
+Standard model sumamry functions on the dbc output are provided.
+
+Returning the bias-corrected coefficients:
+
+```{r}
+coef(fit_endo)
+```
+
+
+Returning the variance-convariance matrix on the bias corrected coefficients:
+```{r}
+vcov(fit_endo)
+```
+
+Standard confidence intervals:
+```{r}
+confint(fit_endo, level = 0.90)
+```
+
+The number of observations:
+```{r}
+nobs(fit_endo)
+```
+
+### broom / modelsummary
+
+The package has methods to interface with the `broom` and `modelsummary` packages.
+
+Create a tidy version of the bias-corrected coefficients:
+
+```{r broom}
+library(broom)
+
+tidy(fit_endo, conf.int = TRUE, conf.level = 0.95)
+
+```
+
+`glance` shows other model information, like number of observations.
+
+```{r}
+glance(fit_endo)
+```
+
+We can produce tables from `modelsummary`. Using the `shape = group + term ~ model` argument groups the table by whether the coefficients are in the outcome or treatment equation.
+
+```{r modelsummary}
+library(modelsummary)
+
+# Multiple models side-by-side
+modelsummary(
+    list(Exogenous = fit_exog, Endogenous = fit_endo),
+    shape = group + term ~ model
+)
+```

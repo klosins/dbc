@@ -23,6 +23,20 @@
 #' @param beta_X1 Coefficients on X1 covariates (default NULL -> vector of 1s)
 #' @param beta_X2 Coefficients on X2 covariates (default NULL -> vector of 1s)
 #' @return data.table with columns: panel_id, time, a, D, y, lag_y, plus covariate columns
+#' @examples
+#' set.seed(1)
+#'
+#' # Basic: no covariates, exogenous treatment
+#' dat <- DGP(N = 100, N_T = 4, rho1 = 0.3, rho2 = 0, tau = 0.5)
+#' head(dat)
+#'
+#' # Endogenous treatment and outcome/treatment covariates
+#' dat_endo <- DGP(N = 100, N_T = 4, rho1 = 0.3, rho2 = 0.2, tau = 0.5,
+#'                 n_X1 = 1, n_X2 = 1)
+#'
+#' # Heterogeneous treatment effects via interactions
+#' dat_interact <- DGP(N = 100, N_T = 4, rho1 = 0.3, rho2 = 0.2,
+#'                     tau = c(0.8, 1.2), n_W = 2)
 #' @export
 DGP <- function(
     N = 100,

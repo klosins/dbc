@@ -46,7 +46,7 @@ test_that("errors for invalid variable names", {
     expect_error(
         dbc(
             outcome_fml = y ~ lag_y + D:W_1 + D:W_2 + X1_1,
-            treatment_fml = D ~ lag_y + X2_1 + AA,
+            treatment_fml = D ~ lag_y + X2_1,
             lag_y = "lag_y_y",
             treatment = "D",
             panel_id = "panel_id",
@@ -114,15 +114,17 @@ test_that("errors for invalid variable names", {
 
     # Outcome variable on RHS
     expect_error(
-        dbc(
-            outcome_fml = y ~ y + lag_y + D:W_1 + D:W_2 + X1_1,
-            treatment_fml = D ~ lag_y + X2_1,
-            lag_y = "lag_y",
-            treatment = "D",
-            panel_id = "panel_id",
-            time_id = "time",
-            data = data,
-            reltol = 1e-12
+        suppressWarnings(
+            dbc(
+                outcome_fml = y ~ y + lag_y + D:W_1 + D:W_2 + X1_1,
+                treatment_fml = D ~ lag_y + X2_1,
+                lag_y = "lag_y",
+                treatment = "D",
+                panel_id = "panel_id",
+                time_id = "time",
+                data = data,
+                reltol = 1e-12
+            )
         )
     )
 })
@@ -138,7 +140,10 @@ test_that("errors and warnings for data problems", {
             treatment = "D",
             panel_id = "panel_id",
             time_id = "time",
-            data = transform(data, D = sample(c(0, 1), size = nrow(data), replace = TRUE)),
+            data = transform(
+                data,
+                D = sample(c(0, 1), size = nrow(data), replace = TRUE)
+            ),
             reltol = 1e-12
         )
     )

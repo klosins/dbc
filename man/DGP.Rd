@@ -55,3 +55,18 @@ Treatment equation (eq 89):
 
 \deqn{D_{i,t} = c_i + \rho_2 Y_{i,t-1} + \beta_2' X_{2,i} + u_{i,t}}{D_it = c_i + rho_2*Y_i(t-1) + beta_2'*X2_i + u_it}
 }
+\examples{
+set.seed(1)
+
+# Basic: no covariates, exogenous treatment
+dat <- DGP(N = 100, N_T = 4, rho1 = 0.3, rho2 = 0, tau = 0.5)
+head(dat)
+
+# Endogenous treatment and outcome/treatment covariates
+dat_endo <- DGP(N = 100, N_T = 4, rho1 = 0.3, rho2 = 0.2, tau = 0.5,
+                n_X1 = 1, n_X2 = 1)
+
+# Heterogeneous treatment effects via interactions
+dat_interact <- DGP(N = 100, N_T = 4, rho1 = 0.3, rho2 = 0.2,
+                    tau = c(0.8, 1.2), n_W = 2)
+}

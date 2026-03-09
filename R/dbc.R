@@ -22,6 +22,47 @@
 #' @param maxit Double: Maximum number of solver iterations.
 #'
 #' @return An object of class "dbc".
+#' @examples
+#' set.seed(1)
+#'
+#' # Exogenous treatment
+#' dat_exog <- DGP(N = 100, N_T = 4, rho1 = 0.3, rho2 = 0, tau = 0.5)
+#' fit_exog <- dbc(
+#'     outcome_fml = y ~ lag_y + D,
+#'     lag_y       = "lag_y",
+#'     treatment   = "D",
+#'     panel_id    = "panel_id",
+#'     time_id     = "time",
+#'     data        = dat_exog
+#' )
+#' print(fit_exog)
+#'
+#' # Endogenous treatment
+#' dat_endo <- DGP(N = 100, N_T = 4, rho1 = 0.3, rho2 = 0.2, tau = 0.5)
+#' fit_endo <- dbc(
+#'     outcome_fml   = y ~ lag_y + D,
+#'     treatment_fml = D ~ lag_y,
+#'     lag_y         = "lag_y",
+#'     treatment     = "D",
+#'     panel_id      = "panel_id",
+#'     time_id       = "time",
+#'     data          = dat_endo
+#' )
+#' print(fit_endo)
+#'
+#' # Heterogeneous treatment effects (interactions)
+#' dat_int <- DGP(N = 100, N_T = 4, rho1 = 0.3, rho2 = 0.2,
+#'                tau = c(0.8, 1.2), n_W = 2)
+#' fit_int <- dbc(
+#'     outcome_fml   = y ~ lag_y + D:W_1 + D:W_2,
+#'     treatment_fml = D ~ lag_y,
+#'     lag_y         = "lag_y",
+#'     treatment     = "D",
+#'     panel_id      = "panel_id",
+#'     time_id       = "time",
+#'     data          = dat_int
+#' )
+#' print(fit_int)
 #' @export
 dbc <- function(
     outcome_fml,
