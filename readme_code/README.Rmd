@@ -44,17 +44,18 @@ library(dbc)
 The follows shows example usage of the DBC under three general types of model.
 
 The first is the **exogenous** treatment model, where the outcome is:
+
 $$Y_{it} = \alpha_{i} + \rho_{1} Y_{t-1} + \tau D_{t} + \beta_{1} X_{1} +\varepsilon_{it}$$
 
 ```{r exog}
 
+set.seed(42)
 
 # Exogenous treatment (no lag_y in treatment equation)
-data_exog <- DGP(N = 500, N_T = 4, rho1 = 0.2, rho2 = 0, tau = 0.5,n_X1 = 1, n_X2 = 0)
-
+data_exog <- DGP(N = 500, N_T = 4, rho1 = 0.2, rho2 = 0, tau = 0.5, n_X1 = 1, n_X2 = 0)
 
 fit_exog <- dbc(
-    outcome_fml = y ~ lag_y + D,
+    outcome_fml = y ~ lag_y + D + X1_1,
     lag_y       = "lag_y",
     treatment   = "D",
     panel_id    = "panel_id",
@@ -67,12 +68,13 @@ summary(fit_exog)
 ```
 
 The second, is the **endogenous** treatment model, where the treatment effect is also a function of the previous values of the outcome:
+
 $$Y_{it} = \alpha_{i} + \rho_{1} Y_{t-1} + \tau D_{t} \beta_{1}X_{1}  +\varepsilon_{it}$$
+
 $$D_{it} = c_{i} + \rho_{2} Y_{t-1}  + \beta_{2} X_{2} + u_{it}$$
 
 ```{r endo}
 
-set.seed(42)
 
 # Endogenous treatment (lag_y in treatment equation)
 data_endo <- DGP(N = 500, N_T = 4, rho1 = 0.2, rho2 = 0.3, tau = 0.5,n_X1 = 1, n_X2 = 1)
@@ -91,7 +93,9 @@ summary(fit_endo)
 ```
 
 Last, the model that allows for interactions between the treatment variable and exogenous variables: 
+
 $$Y_{it} = \alpha_{i} + \rho_{1} Y_{t-1} + \tau_{1} W_{1} \times D_{t} + \tau_{2} W_{2} \times D_{t} \beta_{1}X_{1}  +\varepsilon_{it}$$
+
 $$D_{it} = c_{i} + \rho_{2} Y_{t-1}  + \beta_{2} X_{2} + u_{it}$$
 
 
@@ -174,6 +178,7 @@ library(modelsummary)
 # Multiple models side-by-side
 modelsummary(
     list(Exogenous = fit_exog, Endogenous = fit_endo),
-    shape = group + term ~ model
+    shape = group + term ~ model,
+    output = "latex"
 )
 ```

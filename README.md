@@ -33,51 +33,52 @@ The follows shows example usage of the DBC under three general types of
 model.
 
 The first is the **exogenous** treatment model, where the outcome is:
+
 $$Y_{it} = \alpha_{i} + \rho_{1} Y_{t-1} + \tau D_{t} + \beta_{1} X_{1} +\varepsilon_{it}$$
 
 ``` r
 
+set.seed(42)
 
 # Exogenous treatment (no lag_y in treatment equation)
-data_exog <- DGP(N = 500, N_T = 4, rho1 = 0.2, rho2 = 0, tau = 0.5,n_X1 = 1, n_X2 = 0)
-
+data_exog <- DGP(N = 500, N_T = 4, rho1 = 0.2, rho2 = 0, tau = 0.5, n_X1 = 1, n_X2 = 0)
 
 fit_exog <- dbc(
-    outcome_fml = y ~ lag_y + D,
+    outcome_fml = y ~ lag_y + D + X1_1,
     lag_y       = "lag_y",
     treatment   = "D",
     panel_id    = "panel_id",
     time_id     = "time",
     data        = data_exog
 )
-#> Warning in dbc(outcome_fml = y ~ lag_y + D, lag_y = "lag_y", treatment = "D", : Estimated |phi| = 1.3463 >= 1. Stationarity assumption (Assumption 5, eq 35) violated. Bias correction may be
-#> unreliable.
 
 
 summary(fit_exog)
 #> Dynamic Bias-Corrected Estimator
 #> 
 #> Call:
-#> dbc(outcome_fml = y ~ lag_y + D, lag_y = "lag_y", treatment = "D",     panel_id = "panel_id", time_id = "time", data = data_exog)
+#> dbc(outcome_fml = y ~ lag_y + D + X1_1, lag_y = "lag_y", treatment = "D",     panel_id = "panel_id", time_id = "time", data = data_exog)
 #> 
 #> Outcome equation:
 #>       Estimate Std. Error z value Pr(>|z|)    
-#> lag_y  1.34626    0.02326  57.883   <2e-16 ***
-#> D      0.85785    0.08741   9.814   <2e-16 ***
+#> lag_y  0.21457    0.02129   10.08   <2e-16 ***
+#> D      0.46353    0.03051   15.19   <2e-16 ***
+#> X1_1   0.95184    0.03370   28.25   <2e-16 ***
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #> 
-#> N = 500  T = 3  phi = 1.3463  GMM: (converged)
+#> N = 500  T = 3  phi = 0.2146  GMM: (converged)
 ```
 
 The second, is the **endogenous** treatment model, where the treatment
 effect is also a function of the previous values of the outcome:
+
 $$Y_{it} = \alpha_{i} + \rho_{1} Y_{t-1} + \tau D_{t} \beta_{1}X_{1}  +\varepsilon_{it}$$
+
 $$D_{it} = c_{i} + \rho_{2} Y_{t-1}  + \beta_{2} X_{2} + u_{it}$$
 
 ``` r
 
-set.seed(42)
 
 # Endogenous treatment (lag_y in treatment equation)
 data_endo <- DGP(N = 500, N_T = 4, rho1 = 0.2, rho2 = 0.3, tau = 0.5,n_X1 = 1, n_X2 = 1)
@@ -100,23 +101,25 @@ summary(fit_endo)
 #> 
 #> Outcome equation:
 #>       Estimate Std. Error z value Pr(>|z|)    
-#> lag_y  0.19012    0.02422    7.85 4.15e-15 ***
-#> D      0.48392    0.03416   14.17  < 2e-16 ***
+#> lag_y  0.19601    0.02423    8.09 5.99e-16 ***
+#> D      0.47204    0.03146   15.00  < 2e-16 ***
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #> 
 #> Treatment equation:
 #>       Estimate Std. Error z value Pr(>|z|)    
-#> lag_y  0.32723    0.02197   14.89   <2e-16 ***
+#> lag_y  0.28360    0.02233    12.7   <2e-16 ***
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #> 
-#> N = 500  T = 3  phi = 0.3485  GMM: (converged)
+#> N = 500  T = 3  phi = 0.3299  GMM: (converged)
 ```
 
 Last, the model that allows for interactions between the treatment
 variable and exogenous variables:
+
 $$Y_{it} = \alpha_{i} + \rho_{1} Y_{t-1} + \tau_{1} W_{1} \times D_{t} + \tau_{2} W_{2} \times D_{t} \beta_{1}X_{1}  +\varepsilon_{it}$$
+
 $$D_{it} = c_{i} + \rho_{2} Y_{t-1}  + \beta_{2} X_{2} + u_{it}$$
 
 ``` r
@@ -149,21 +152,21 @@ summary(fit_interact)
 #> 
 #> Outcome equation:
 #>       Estimate Std. Error z value Pr(>|z|)    
-#> lag_y 0.197031   0.003657   53.88   <2e-16 ***
-#> D:W_1 0.793227   0.004728  167.77   <2e-16 ***
-#> D:W_2 1.199933   0.004571  262.50   <2e-16 ***
-#> X1_1  0.992106   0.032193   30.82   <2e-16 ***
+#> lag_y 0.201906   0.003954   51.07   <2e-16 ***
+#> D:W_1 0.800101   0.004293  186.36   <2e-16 ***
+#> D:W_2 1.201314   0.003830  313.65   <2e-16 ***
+#> X1_1  1.017534   0.032734   31.09   <2e-16 ***
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #> 
 #> Treatment equation:
 #>       Estimate Std. Error z value Pr(>|z|)    
-#> lag_y 0.297533   0.003347   88.90   <2e-16 ***
-#> X2_1  0.998390   0.029439   33.91   <2e-16 ***
+#> lag_y  0.30295    0.00296  102.35   <2e-16 ***
+#> X2_1   1.00565    0.03086   32.58   <2e-16 ***
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #> 
-#> N = 500  T = 3  phi = 0.2007  GMM: (converged)
+#> N = 500  T = 3  phi = 0.2051  GMM: (converged)
 ```
 
 ### S3 methods
@@ -175,7 +178,7 @@ Returning the bias-corrected coefficients:
 ``` r
 coef(fit_endo)
 #>          lag_y              D treat_eq:lag_y 
-#>      0.1901217      0.4839166      0.3272342
+#>      0.1960087      0.4720423      0.2836029
 ```
 
 Returning the variance-convariance matrix on the bias corrected
@@ -184,9 +187,9 @@ coefficients:
 ``` r
 vcov(fit_endo)
 #>                        lag_y             D treat_eq:lag_y
-#> lag_y           5.865491e-04 -0.0003524152  -4.479349e-05
-#> D              -3.524152e-04  0.0011668063   2.971201e-04
-#> treat_eq:lag_y -4.479349e-05  0.0002971201   4.827017e-04
+#> lag_y           0.0005870888 -0.0001764293   0.0000619551
+#> D              -0.0001764293  0.0009897852   0.0001792766
+#> treat_eq:lag_y  0.0000619551  0.0001792766   0.0004988017
 ```
 
 Standard confidence intervals:
@@ -194,9 +197,9 @@ Standard confidence intervals:
 ``` r
 confint(fit_endo, level = 0.90)
 #>                       5%       95%
-#> lag_y          0.1502853 0.2299580
-#> D              0.4277308 0.5401024
-#> treat_eq:lag_y 0.2910960 0.3633724
+#> lag_y          0.1561540 0.2358634
+#> D              0.4202938 0.5237908
+#> treat_eq:lag_y 0.2468670 0.3203389
 ```
 
 The number of observations:
@@ -218,17 +221,17 @@ library(broom)
 
 tidy(fit_endo, conf.int = TRUE, conf.level = 0.95)
 #>       group  term  estimate  std.error statistic      p.value  conf.low conf.high
-#> 1   Outcome lag_y 0.1901217 0.02421878  7.850176 4.154532e-15 0.1426537 0.2375896
-#> 2   Outcome     D 0.4839166 0.03415855 14.166779 1.470947e-45 0.4169670 0.5508661
-#> 3 Treatment lag_y 0.3272342 0.02197047 14.894272 3.590735e-50 0.2841729 0.3702955
+#> 1   Outcome lag_y 0.1960087 0.02422991  8.089533 5.989376e-16 0.1485189 0.2434985
+#> 2   Outcome     D 0.4720423 0.03146085 15.004117 6.900337e-51 0.4103802 0.5337044
+#> 3 Treatment lag_y 0.2836029 0.02233387 12.698333 6.040256e-37 0.2398293 0.3273765
 ```
 
 `glance` shows other model information, like number of observations.
 
 ``` r
 glance(fit_endo)
-#>         N N_T nobs   phi converged
-#> lag_y 500   3 1500 0.348      TRUE
+#>         N N_T nobs  phi converged
+#> lag_y 500   3 1500 0.33      TRUE
 ```
 
 We can produce tables from `modelsummary`. Using the
@@ -241,19 +244,24 @@ library(modelsummary)
 # Multiple models side-by-side
 modelsummary(
     list(Exogenous = fit_exog, Endogenous = fit_endo),
-    shape = group + term ~ model
+    shape = group + term ~ model,
+    output = "latex"
 )
+#> Warning: To compile a LaTeX document with this table, the following commands must be placed in the document preamble:
+#> 
+#> \usepackage{tabularray}
+#> \usepackage{float}
+#> \usepackage{graphicx}
+#> \usepackage{codehigh}
+#> \usepackage[normalem]{ulem}
+#> \UseTblrLibrary{booktabs}
+#> \UseTblrLibrary{siunitx}
+#> \newcommand{\tinytableTabularrayUnderline}[1]{\underline{#1}}
+#> \newcommand{\tinytableTabularrayStrikeout}[1]{\sout{#1}}
+#> \NewTableCommand{\tinytableDefineColor}[3]{\definecolor{#1}{#2}{#3}}
+#> 
+#> To disable `siunitx` and prevent `modelsummary` from wrapping numeric entries in `\num{}`, call:
+#> 
+#> options("modelsummary_format_numeric_latex" = "plain")
+#>  This warning appears once per session.
 ```
-
-|           |          | Exogenous | Endogenous |
-|-----------|----------|-----------|------------|
-| Outcome   | lag_y    | 1.346     | 0.190      |
-|           |          | (0.023)   | (0.024)    |
-|           | D        | 0.858     | 0.484      |
-|           |          | (0.087)   | (0.034)    |
-| Treatment | lag_y    |           | 0.327      |
-|           |          |           | (0.022)    |
-|           | Num.Obs. | 1500      | 1500       |
-|           | N        | 500       | 500        |
-|           | N_T      | 3         | 3          |
-|           | phi      | 1.35      | 0.348      |
