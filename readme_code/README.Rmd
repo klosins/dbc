@@ -178,7 +178,6 @@ library(modelsummary)
 # Multiple models side-by-side
 modelsummary(
     list(Exogenous = fit_exog, Endogenous = fit_endo),
-    shape = group + term ~ model,
-    output = "latex"
+    shape = group + term ~ model
 )
 ```
