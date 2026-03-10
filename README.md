@@ -244,24 +244,21 @@ library(modelsummary)
 # Multiple models side-by-side
 modelsummary(
     list(Exogenous = fit_exog, Endogenous = fit_endo),
-    shape = group + term ~ model,
-    output = "latex"
+    shape = group + term ~ model
 )
-#> Warning: To compile a LaTeX document with this table, the following commands must be placed in the document preamble:
-#> 
-#> \usepackage{tabularray}
-#> \usepackage{float}
-#> \usepackage{graphicx}
-#> \usepackage{codehigh}
-#> \usepackage[normalem]{ulem}
-#> \UseTblrLibrary{booktabs}
-#> \UseTblrLibrary{siunitx}
-#> \newcommand{\tinytableTabularrayUnderline}[1]{\underline{#1}}
-#> \newcommand{\tinytableTabularrayStrikeout}[1]{\sout{#1}}
-#> \NewTableCommand{\tinytableDefineColor}[3]{\definecolor{#1}{#2}{#3}}
-#> 
-#> To disable `siunitx` and prevent `modelsummary` from wrapping numeric entries in `\num{}`, call:
-#> 
-#> options("modelsummary_format_numeric_latex" = "plain")
-#>  This warning appears once per session.
 ```
+
+|           |          | Exogenous | Endogenous |
+|-----------|----------|-----------|------------|
+| Outcome   | lag_y    | 0.215     | 0.196      |
+|           |          | (0.021)   | (0.024)    |
+|           | D        | 0.464     | 0.472      |
+|           |          | (0.031)   | (0.031)    |
+|           | X1_1     | 0.952     |            |
+|           |          | (0.034)   |            |
+| Treatment | lag_y    |           | 0.284      |
+|           |          |           | (0.022)    |
+|           | Num.Obs. | 1500      | 1500       |
+|           | N        | 500       | 500        |
+|           | N_T      | 3         | 3          |
+|           | phi      | 0.215     | 0.33       |
