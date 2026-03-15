@@ -2,11 +2,11 @@
 #'
 #' If n_W = 0 (no interactions):
 #'
-#' \deqn{Y_{i,t} = a_i + \tau_0 D_{i,t} + \beta_1' X_{1,i} + \rho_1 Y_{i,t-1} + \varepsilon_{i,t}}{Y_it = a_i + tau_0*D_it + beta_1'*X1_i + rho_1*Y_i(t-1) + eps_it}
+#' \deqn{Y_{i,t} = a_i + \tau_0 D_{i,t} + \beta_1' X_{1,i} + \sum_{k=1}^{p} \rho_{1,k} Y_{i,t-k} + \varepsilon_{i,t}}{Y_it = a_i + tau_0*D_it + beta_1'*X1_i + sum_k rho1[k]*Y_i(t-k) + eps_it}
 #'
 #' If n_W > 0 (with interactions, eq 88):
 #'
-#' \deqn{Y_{i,t} = a_i + \sum_c \tau_c (D_{i,t} \cdot W^c_i) + \beta_1' X_{1,i} + \rho_1 Y_{i,t-1} + \varepsilon_{i,t}}{Y_it = a_i + sum_c tau_c*(D_it*W^c_i) + beta_1'*X1_i + rho_1*Y_i(t-1) + eps_it}
+#' \deqn{Y_{i,t} = a_i + \sum_c \tau_c (D_{i,t} \cdot W^c_i) + \beta_1' X_{1,i} + \sum_{k=1}^{p} \rho_{1,k} Y_{i,t-k} + \varepsilon_{i,t}}{Y_it = a_i + sum_c tau_c*(D_it*W^c_i) + beta_1'*X1_i + sum_k rho1[k]*Y_i(t-k) + eps_it}
 #'
 #' Treatment equation (eq 89):
 #'
@@ -14,15 +14,20 @@
 #'
 #' @param N Number of individuals
 #' @param N_T Number of time periods
-#' @param rho1 Coefficient on lagged outcome in outcome equation (\eqn{\rho_1}{rho_1})
-#' @param rho2 Coefficient on lagged outcome in treatment equation (\eqn{\rho_2}{rho_2})
+#' @param rho1 Coefficient(s) on lagged outcome in outcome equation. Scalar for one lag,
+#'   vector of length p for p lags: \eqn{\rho_{1,k}}{rho1[k]} is the coefficient on
+#'   \eqn{Y_{i,t-k}}{Y_i(t-k)}.
+#' @param rho2 Coefficient on lagged outcome in treatment equation (\eqn{\rho_2}{rho_2}),
+#'   always uses lag 1 only.
 #' @param tau Treatment effect. Scalar if n_W=0, vector of length n_W if n_W>0. Default 1.
 #' @param n_X1 Number of exogenous covariates in outcome equation (default 0)
 #' @param n_X2 Number of exogenous covariates in treatment equation (default 0)
 #' @param n_W Number of covariates interacting with treatment (default 0)
 #' @param beta_X1 Coefficients on X1 covariates (default NULL -> vector of 1s)
 #' @param beta_X2 Coefficients on X2 covariates (default NULL -> vector of 1s)
-#' @return data.table with columns: panel_id, time, a, D, y, lag_y, plus covariate columns
+#' @return data.table with columns: panel_id, time, a, D, y, lag_y (lag 1), lag_y_2, ...,
+#'   lag_y_p (if p > 1), plus covariate columns. First p time periods are dropped so all
+#'   observations have a complete lag history.
 #' @examples
 #' set.seed(1)
 #'
@@ -50,6 +55,8 @@ DGP <- function(
     beta_X1 = NULL,
     beta_X2 = NULL
 ) {
+    p_lags <- length(rho1)
+
     #  Validate and set defaults for coefficients
     if (n_W > 0) {
         if (length(tau) == 1) {
@@ -67,6 +74,7 @@ DGP <- function(
     }
     stopifnot(length(beta_X1) == n_X1)
     stopifnot(length(beta_X2) == n_X2)
+    stopifnot(N_T > p_lags)
 
     #  Draw fixed effects and initial conditions
     a <- rnorm(N, 0, 5)
@@ -125,16 +133,9 @@ DGP <- function(
     rows_at <- function(t) seq(t, n_obs, by = N_T)
 
     #  Simulate panel
-    # t=1: use initial D0
+    # t=1: use initial D0; no lag history, so lag contribution = 0
     r1 <- rows_at(1)
 
-    # X2 contribution for treatment eq at t=1 (not used for D0, but compute for consistency)
-    X2_contrib_t <- rep(0, N)
-    if (n_X2 > 0) {
-        X2_contrib_t <- as.numeric(X2_mat[r1, , drop = FALSE] %*% beta_X2)
-    }
-
-    # X1 contribution for outcome eq at t=1
     X1_contrib_t <- rep(0, N)
     if (n_X1 > 0) {
         X1_contrib_t <- as.numeric(X1_mat[r1, , drop = FALSE] %*% beta_X1)
@@ -163,7 +164,12 @@ DGP <- function(
     }
 
     for (year in 2:N_T) {
-        DT[, lag_y := data.table::shift(y), by = panel_id]
+        # Compute all available lags (lags beyond year-1 don't exist yet, treated as 0)
+        avail_lags <- min(p_lags, year - 1)
+        for (k in seq_len(avail_lags)) {
+            tmp_col <- paste0(".lag_y_", k)
+            DT[, (tmp_col) := data.table::shift(y, k), by = panel_id]
+        }
 
         rt <- rows_at(year)
 
@@ -177,8 +183,22 @@ DGP <- function(
             X1_contrib_t <- as.numeric(X1_mat[rt, , drop = FALSE] %*% beta_X1)
         }
 
+        # Lag contribution to outcome equation: sum_k rho1[k] * Y_{i,t-k}
+        lag_contrib_t <- rep(0, N)
+        for (k in seq_len(avail_lags)) {
+            tmp_col <- paste0(".lag_y_", k)
+            lag_contrib_t <- lag_contrib_t +
+                rho1[k] * DT[time == year, get(tmp_col)]
+        }
+
+        # Treatment equation always uses lag 1 only
+        lag_y1_t <- DT[time == year, get(".lag_y_1")]
+
         # D_{i,t} = c_i + ρ₂ Y_{i,t-1} + β₂'X₂_{i,t} + u_{i,t}
-        DT[time == year, D := a + rho2 * lag_y + X2_contrib_t + rnorm(.N, 0, 1)]
+        DT[
+            time == year,
+            D := a + rho2 * lag_y1_t + X2_contrib_t + rnorm(.N, 0, 1)
+        ]
 
         if (n_W > 0) {
             W_t <- W_mat[rt, , drop = FALSE]
@@ -194,22 +214,38 @@ DGP <- function(
                         interaction_sum
                     } +
                     X1_contrib_t +
-                    rho1 * lag_y +
+                    lag_contrib_t +
                     rnorm(.N, 0, 1)
             ]
         } else {
             DT[
                 time == year,
-                y := a + tau * D + X1_contrib_t + rho1 * lag_y + rnorm(.N, 0, 1)
+                y := a +
+                    tau * D +
+                    X1_contrib_t +
+                    lag_contrib_t +
+                    rnorm(.N, 0, 1)
             ]
         }
     }
 
-    # Recompute lag_y for final dataset
-    DT[, lag_y := data.table::shift(y), by = panel_id]
+    # Remove temporary lag columns used during simulation
+    tmp_cols <- grep("^\\.lag_y_", names(DT), value = TRUE)
+    if (length(tmp_cols) > 0) {
+        DT[, (tmp_cols) := NULL]
+    }
 
-    # Drop first period (no lag available)
-    DT <- DT[time > 1]
+    # Compute final lag columns for output: lag_y = lag 1, lag_y_k for k > 1
+    DT[, lag_y := data.table::shift(y, 1), by = panel_id]
+    if (p_lags > 1) {
+        for (k in 2:p_lags) {
+            lag_col <- paste0("lag_y_", k)
+            DT[, (lag_col) := data.table::shift(y, k), by = panel_id]
+        }
+    }
+
+    # Drop first p_lags periods (incomplete lag history)
+    DT <- DT[time > p_lags]
 
     DT
 }

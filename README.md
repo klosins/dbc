@@ -11,15 +11,12 @@
 This package implements the dynamic biases correction estimator as per
 Klosin, S, Dynamic Biases of Static Panel Data Estimators (forthcoming).
 This allows the estimation of treatment effects in panel fixed effects
-models where the outcome is dynamic.
+models where the outcome is dynamic. See below for usage and examples.
 
 ## Installation
 
 ``` r
-# Install the CRAN version
-pak::pak("dbc")
-
-# Or install the latest version on github
+# Install the latest version on github
 pak::pak("github::klosins/dbc")
 ```
 
@@ -35,6 +32,20 @@ model.
 The first is the **exogenous** treatment model, where the outcome is:
 
 $$Y_{it} = \alpha_{i} + \rho_{1} Y_{t-1} + \tau D_{t} + \beta_{1} X_{1} +\varepsilon_{it}$$
+
+and the treatment equation is:
+
+$$D_{it} = u_{it}$$.
+
+The following shows the simulation of this model using the `dbc::DGP`
+data generating process function, and then the estimation of this model.
+
+`summary(fit_exog)` shows the bias-corrected estimates. The reported
+standard errors used underlying iid errors, and are not clustered.
+
+The biased, OLS estimates of the model can be shown as
+`fit_exog$biased_coefficients`. `str(fit_exog)` shows the full list of
+objects returned with the `dbc` model.
 
 ``` r
 
@@ -115,8 +126,8 @@ summary(fit_endo)
 #> N = 500  T = 3  phi = 0.3299  GMM: (converged)
 ```
 
-Last, the model that allows for interactions between the treatment
-variable and exogenous variables:
+Last, the **interaction** model, which allows for interactions between
+the treatment variable and exogenous variables, $W$:
 
 $$Y_{it} = \alpha_{i} + \rho_{1} Y_{t-1} + \tau_{1} W_{1} \times D_{t} + \tau_{2} W_{2} \times D_{t} \beta_{1}X_{1}  +\varepsilon_{it}$$
 
@@ -181,7 +192,7 @@ coef(fit_endo)
 #>      0.1960087      0.4720423      0.2836029
 ```
 
-Returning the variance-convariance matrix on the bias corrected
+Returning the variance-convariance matrix on the bias-corrected
 coefficients:
 
 ``` r
