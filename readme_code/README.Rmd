@@ -37,15 +37,15 @@ pak::pak("github::klosins/dbc")
 library(dbc)
 ```
 
-The follows shows example usage of the DBC under three general types of model.
+The follows shows example usage of the DBC under three general types of model. The variables of interest are the outcome variable, $Y_{it}$ for individual $i$ and time $t$, and the treatment variable $D_{it}$.
 
 The first is the **exogenous** treatment model, where the outcome is:
 
 $$Y_{it} = \alpha_{i} + \rho_{1} Y_{t-1} + \tau D_{t} + \beta_{1} X_{1} +\varepsilon_{it}$$
 
-and the treatment equation is:
+and with the treatment equation:
 
-$$D_{it} = u_{it}$$.
+$$D_{it} = u_{it}$$
 
 The following shows the simulation of this model using the `dbc::DGP` data generating process function, and then the estimation of this model.
 
