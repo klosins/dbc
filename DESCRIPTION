@@ -6,7 +6,7 @@ Authors@R:
         person("Sylvia", "Klosin", email = "sklosin@ucdavis.edu", role = c("cre", "cph")),
         person("Stuart", "Morrison", role = "aut", comment = c(ORCID = "0000-0003-4289-2839"))
     )
-Description: This package implements the dynamic biases correction estimator as per Klosin, S, Dynamic Biases of Static Panel Data Estimators (forthcoming). This allows the estimation of treatment effects in panel fixed effects models where the outcome is dynamic.
+Description: This package implements the dynamic biases correction estimator as per Klosin, S, Dynamic Biases of Static Panel Data Estimators. This allows the estimation of treatment effects in panel fixed effects models where the outcome is dynamic.
 License: MIT + file LICENSE
 URL: https://github.com/klosins/dbc/
 Imports:
