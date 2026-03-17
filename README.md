@@ -9,7 +9,7 @@
 ## Dynamic bias correction for panel data estimators
 
 This package implements the dynamic biases correction estimator as per
-Klosin, S, Dynamic Biases of Static Panel Data Estimators (forthcoming).
+Klosin, S, Dynamic Biases of Static Panel Data Estimators.
 This allows the estimation of treatment effects in panel fixed effects
 models where the outcome is dynamic. See below for usage and examples.
 
